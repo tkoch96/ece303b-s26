@@ -1,0 +1,3 @@
+client, proxy, link_c_p
+proxy, ws, link_p_w
+proxy, dns, link_p_dns
