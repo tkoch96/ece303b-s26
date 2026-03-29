@@ -1,9 +1,9 @@
 import time
 import csv
+import threading
 import sys
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import OVSController
 from mininet.link import TCLink
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
@@ -15,18 +15,28 @@ class DynamicTopo(Topo):
 
 	def build(self):
 		hosts_added = set()
+		subnet_counter = 1 # Start at 10.0.1.x
 
 		for h1, h2, link_name in self.topo_specs:
 			# Add hosts if they haven't been added yet
 			if h1 not in hosts_added:
-				self.addHost(h1)
+				# ip=None prevents Mininet from auto-assigning a default global IP
+				self.addHost(h1, ip=None) 
 				hosts_added.add(h1)
 			if h2 not in hosts_added:
-				self.addHost(h2)
+				self.addHost(h2, ip=None)
 				hosts_added.add(h2)
 			
-			# Add a direct link between the two hosts
-			self.addLink(h1, h2)
+			# Define isolated IP addresses for this specific link
+			# E.g., Link 1 gets 10.0.1.1 and 10.0.1.2
+			# E.g., Link 2 gets 10.0.2.1 and 10.0.2.2
+			ip1 = f'10.0.{subnet_counter}.1/24'
+			ip2 = f'10.0.{subnet_counter}.2/24'
+			
+			# Add the link and explicitly assign the IPs to the interfaces on each end
+			self.addLink(h1, h2, params1={'ip': ip1}, params2={'ip': ip2})
+			
+			subnet_counter += 1
 
 def parse_topology(filepath):
 	"""Reads topology.csv and returns a list of (host1, host2, link_name)."""
@@ -90,45 +100,64 @@ def apply_network_change(net, link_map, event):
 	intf1.config(bw=event['bw_mbps'], delay=event['latency'], loss=event['loss'])
 	intf2.config(bw=event['bw_mbps'], delay=event['latency'], loss=event['loss'])
 
+def run_scenario_loop(net, link_map, events):
+	"""Runs the scenario events in a continuous background loop."""
+	while True:
+		info("\n[*] Starting scenario cycle...\n")
+		start_time = time.time()
+		event_idx = 0
+		
+		while event_idx < len(events):
+			elapsed = time.time() - start_time
+			next_event = events[event_idx]
+			
+			if elapsed >= next_event['time']:
+				apply_network_change(net, link_map, next_event)
+				event_idx += 1
+			else:
+				time.sleep(0.1)
+		
+		info("\n[*] Scenario cycle finished. Restarting in 1 second...\n")
+		time.sleep(1)
+
 def main(topo_file, scenario_file):
 	topo_specs, link_map = parse_topology(topo_file)
 	events = parse_scenario(scenario_file)
 
 	topo = DynamicTopo(topo_specs)
-	net = Mininet(topo=topo, controller=OVSController, link=TCLink)
+	net = Mininet(topo=topo, link=TCLink)
 	net.start()
 
-	# Print out auto-assigned IPs so you know how to configure your commands
-	info("\n[*] Auto-Assigned IP Addresses:\n")
+	# Print Network Info (same as your original code)
+	info("\n" + "="*40 + "\n")
 	for host in net.hosts:
-		info(f"    {host.name}: {host.IP()}\n")
-	info("\n")
+		info(f"Node: {host.name}\n")
+		for intf in host.intfList():
+			if intf.name != 'lo':
+				info(f"  └─ Interface {intf.name} -> IP: {intf.IP()}\n")
+	info("="*40 + "\n\n")
 
-	info("[*] Network is up. Starting scenario timeline...\n")
-	start_time = time.time()
-	event_idx = 0
+	# 1. Start the background thread
+	# Setting daemon=True ensures the thread dies when the main program exits
+	background_thread = threading.Thread(
+		target=run_scenario_loop, 
+		args=(net, link_map, events),
+		daemon=True 
+	)
+	background_thread.start()
 
-	# Monitor loop
-	while event_idx < len(events):
-		elapsed = time.time() - start_time
-		next_event = events[event_idx]
-		
-		if elapsed >= next_event['time']:
-			apply_network_change(net, link_map, next_event)
-			event_idx += 1
-		else:
-			time.sleep(0.1) # Short sleep to prevent CPU pegging
-
-	info("\n[*] Scenario complete. Dropping into CLI for testing.\n")
+	# 2. Drop to CLI immediately
+	info("[*] Background scenario running. Dropping into CLI...\n")
 	CLI(net)
 
+	# 3. Cleanup after exiting CLI
 	info("[*] Shutting down...\n")
 	net.stop()
 
 if __name__ == '__main__':
 	setLogLevel('info')
 	if len(sys.argv) != 3:
-		print("Usage: sudo /Users/tomkoch/Documents/venv/bin/python3.14 run_scenario.py <topology.csv> <scenario.csv>")
+		print("Usage: sudo python3 run_scenario.py <topology.csv> <scenario.csv>")
 		sys.exit(1)
 	
 	main(sys.argv[1], sys.argv[2])
