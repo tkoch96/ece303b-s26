@@ -1,0 +1,6 @@
+# Sudden doublings of load to test resource scaling
+0, 5, 2
+5, 10, 4
+10, 15, 8
+15, 20, 16
+20, 25, 32
