@@ -60,12 +60,12 @@ def parse_scenario(filepath):
 		reader = csv.reader(f)
 		for row in reader:
 			if not row or row[0].startswith('#'): continue
-			link_name, t, lat, bw, loss = [x.strip() for x in row]
+			link_name, t, bw, lat, loss = [x.strip() for x in row]
 			events.append({
 				'link_name': link_name,
 				'time': float(t),
 				'latency': f"{lat}ms",
-				'bw_mbps': float(bw) / 1000.0, # Convert kbps to Mbps for Mininet
+				'bw_mbps': float(bw), # Convert kbps to Mbps for Mininet
 				'loss': float(loss)
 			})
 			
