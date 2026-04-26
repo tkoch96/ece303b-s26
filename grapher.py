@@ -23,9 +23,19 @@ def parse_log(log_path):
 				try:
 					t_req = float(row[1])
 					t_recv = float(row[2])
-					response_str = row[3]
+					if row[3].isdigit():
+						size_bytes = int(row[3])
+					else:
+						size_bytes = 0 # Handle "ERROR" strings safely
+						
 				except ValueError:
 					continue # Skip malformed rows
+				
+				latency = t_recv - t_req
+				
+				req_times.append(t_req)
+				latencies.append(latency)
+				response_sizes.append(size_bytes)
 				
 				latency = t_recv - t_req
 				# Determine "quality" based on the size of the response payload

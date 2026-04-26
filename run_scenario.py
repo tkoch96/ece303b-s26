@@ -75,6 +75,7 @@ def parse_scenario(filepath):
 
 def apply_network_change(net, link_map, event):
 	"""Applies TCLink parameters to the specified link at runtime."""
+	setLogLevel('critical')
 	link_name = event['link_name']
 	
 	if link_name not in link_map:
@@ -95,15 +96,14 @@ def apply_network_change(net, link_map, event):
 
 	info(f"[*] Time {event['time']}s -> Modifying {link_name} ({h1_name}<->{h2_name}): "
 		 f"{event['latency']}, {event['bw_mbps']}Mbps, {event['loss']}% loss\n")
-
+	
 	# Apply configuration to both sides of the link to ensure bi-directional limits
 	intf1.config(bw=event['bw_mbps'], delay=event['latency'], loss=event['loss'])
 	intf2.config(bw=event['bw_mbps'], delay=event['latency'], loss=event['loss'])
-
+	
 def run_scenario_loop(net, link_map, events):
 	"""Runs the scenario events in a continuous background loop."""
 	while True:
-		info("\n[*] Starting scenario cycle...\n")
 		start_time = time.time()
 		event_idx = 0
 		
@@ -117,7 +117,6 @@ def run_scenario_loop(net, link_map, events):
 			else:
 				time.sleep(0.1)
 		
-		info("\n[*] Scenario cycle finished. Restarting in 1 second...\n")
 		time.sleep(1)
 
 def main(topo_file, scenario_file):
@@ -139,6 +138,7 @@ def main(topo_file, scenario_file):
 
 	# 1. Start the background thread
 	# Setting daemon=True ensures the thread dies when the main program exits
+	info("[*] Background scenario running. Dropping into CLI...\n")
 	background_thread = threading.Thread(
 		target=run_scenario_loop, 
 		args=(net, link_map, events),
@@ -147,7 +147,6 @@ def main(topo_file, scenario_file):
 	background_thread.start()
 
 	# 2. Drop to CLI immediately
-	info("[*] Background scenario running. Dropping into CLI...\n")
 	CLI(net)
 
 	# 3. Cleanup after exiting CLI
