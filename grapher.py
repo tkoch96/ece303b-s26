@@ -16,7 +16,7 @@ def parse_log(log_path):
 		with open(log_path, 'r', encoding='utf-8') as f:
 			reader = csv.reader(f, delimiter='\t')
 			for row in reader:
-				# Expecting: domain, time_req, time_recv, response_str
+				# Expecting: domain, time_req, time_recv, response_size
 				if len(row) < 4:
 					continue
 				
@@ -32,15 +32,6 @@ def parse_log(log_path):
 					continue # Skip malformed rows
 				
 				latency = t_recv - t_req
-				
-				req_times.append(t_req)
-				latencies.append(latency)
-				response_sizes.append(size_bytes)
-				
-				latency = t_recv - t_req
-				# Determine "quality" based on the size of the response payload
-				# (Larger payload = higher quality video returned)
-				size_bytes = len(response_str.encode('utf-8'))
 				
 				req_times.append(t_req)
 				latencies.append(latency)

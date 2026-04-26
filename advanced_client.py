@@ -5,6 +5,8 @@ import urllib.error
 import threading
 import os
 
+MAX_TIMEOUT_SECONDS = 5
+
 def parse_query_profile(filepath):
 	"""
 	Parses a CSV profile into a pre-computed schedule of request timestamps.
@@ -36,29 +38,36 @@ def parse_query_profile(filepath):
 	return schedule
 
 def make_request(target_url, requested_domain, log_file, log_lock):
-	"""Executes a single HTTP GET request and safely writes to the shared log."""
-	time_requested = time.time()
-	response_str = ""
-	
-	try:
-		req = urllib.request.Request(target_url, headers={'Host': requested_domain})
-		with urllib.request.urlopen(req, timeout=5) as response:
-			raw_bytes = response.read()
-			response_str = str(len(raw_bytes)) 
-	except urllib.error.URLError as e:
-		response_str = f"ERROR"
-	except Exception as e:
-		response_str = f"UNEXPECTED ERROR"
+    """Executes a single HTTP GET request and safely writes to the shared log."""
+    time_requested = time.time()
+    response_size = 0
+    error_msg = "NONE"  # Default to NONE if the request succeeds
+    
+    try:
+        req = urllib.request.Request(target_url, headers={'Host': requested_domain})
+        with urllib.request.urlopen(req, timeout=MAX_TIMEOUT_SECONDS) as response:
+            raw_body = response.read()
+            response_size = len(raw_body)
+    except requests.exceptions.Timeout:
+        # The request took longer than MAX_TIMEOUT_SECONDS
+        error_msg = f"TIMEOUT:{MAX_TIMEOUT_SECONDS}"
+    except urllib.error.URLError as e:
+        response_size = -1
+        # URLError objects have a .reason attribute that is highly descriptive
+        error_msg = f"URLError: {getattr(e, 'reason', str(e))}"
+    except Exception as e:
+        response_size = -2
+        # repr(e) captures the exception class name + message (e.g., "TimeoutError('timed out')")
+        error_msg = f"Unexpected: {repr(e)}"
 
-	time_received_response = time.time()
+    time_received_response = time.time()
 
-	# requested_domain <tab> time_requested <tab> time_received_response <tab> response_string
-	log_line = f"{requested_domain}\t{time_requested:.4f}\t{time_received_response:.4f}\t{response_str}\n"
-	
-	# Use a thread lock to prevent mangled log lines when requests fire concurrently
-	with log_lock:
-		log_file.write(log_line)
-		log_file.flush()
+    # domain <tab> time_req <tab> time_recv <tab> response_size <tab> error_msg
+    log_line = f"{requested_domain}\t{time_requested:.4f}\t{time_received_response:.4f}\t{response_size}\t{error_msg}\n"
+    
+    with log_lock:
+        log_file.write(log_line)
+        log_file.flush()
 
 def main():
 	# Strictly enforce the 3 arguments specified in the assignment rubric
