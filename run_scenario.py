@@ -127,6 +127,9 @@ def main(topo_file, scenario_file):
 	net = Mininet(topo=topo, link=TCLink)
 	net.start()
 
+	proxy_node = net.get('proxy')
+	proxy_node.cmd('iptables -A OUTPUT -p icmp --icmp-type echo-request -j DROP')
+
 	# Print Network Info (same as your original code)
 	info("\n" + "="*40 + "\n")
 	for host in net.hosts:
