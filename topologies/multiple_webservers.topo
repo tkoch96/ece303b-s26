@@ -1,0 +1,7 @@
+client, proxy, link_c_p
+proxy, dns, link_p_dns
+
+# Multiple Web Servers for Load Balancing
+proxy, ws1, link_p_ws1
+proxy, ws2, link_p_ws2
+proxy, ws3, link_p_ws3

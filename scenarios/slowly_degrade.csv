@@ -1,0 +1,11 @@
+# link_name, time(s), bw(mbps), lat(ms), loss(%)
+# ws1 starts strong, ws2 is a backup
+link_p_ws1, 0, 15, 10, 0
+link_p_ws2, 0, 4, 20, 0
+
+# ws1 slowly decays over 25 seconds
+link_p_ws1, 5, 12, 15, 0
+link_p_ws1, 10, 9, 25, 0
+link_p_ws1, 15, 6, 40, 2
+link_p_ws1, 20, 3, 60, 5
+link_p_ws1, 25, 1, 100, 10

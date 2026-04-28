@@ -1,0 +1,13 @@
+# link_name, time(s), bw(mbps), lat(ms), loss(%)
+# Start with ws1 as the clear winner
+link_p_ws1, 0, 15, 5, 0
+link_p_ws2, 0, 5, 50, 0
+link_p_ws3, 0, 1, 100, 0
+
+# At 15s, flip the bottleneck: ws1 degrades, ws2 becomes optimal
+link_p_ws1, 15, 2, 80, 5
+link_p_ws2, 15, 20, 10, 0
+
+# At 30s, force a shift to ws3
+link_p_ws2, 30, 1, 200, 10
+link_p_ws3, 30, 15, 5, 0

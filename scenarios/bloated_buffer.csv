@@ -1,0 +1,7 @@
+# link_name, time(s), bw(mbps), lat(ms), loss(%)
+# ws1 and ws2 start equal
+link_p_ws1, 0, 10, 10, 0
+link_p_ws2, 0, 10, 10, 0
+
+# ws1 suddenly suffers massive delay, but bandwidth stays high
+link_p_ws1, 10, 10, 400, 0

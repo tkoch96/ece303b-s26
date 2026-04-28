@@ -1,0 +1,12 @@
+# link_name, time(s), bw(mbps), lat(ms), loss(%)
+# ws1 is stable, ws2 is unstable
+link_p_ws1, 0, 8, 15, 0
+link_p_ws2, 0, 20, 5, 0
+link_p_ws3, 0, 2, 50, 0
+
+# ws2 flaps every 3 seconds
+link_p_ws2, 3, 1, 100, 10
+link_p_ws2, 6, 20, 5, 0
+link_p_ws2, 9, 1, 100, 10
+link_p_ws2, 12, 20, 5, 0
+link_p_ws2, 15, 1, 100, 10
