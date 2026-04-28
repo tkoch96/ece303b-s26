@@ -1,7 +1,7 @@
 import time
 import csv
-import threading
-import sys
+import threading, sys, os, json
+
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.link import TCLink
@@ -127,10 +127,7 @@ def main(topo_file, scenario_file):
 	net = Mininet(topo=topo, link=TCLink)
 	net.start()
 
-	proxy_node = net.get('proxy')
-	proxy_node.cmd('iptables -A OUTPUT -p icmp --icmp-type echo-request -j DROP')
-
-	# Print Network Info (same as your original code)
+	# Print Network Info
 	info("\n" + "="*40 + "\n")
 	for host in net.hosts:
 		info(f"Node: {host.name}\n")
@@ -139,8 +136,28 @@ def main(topo_file, scenario_file):
 				info(f"  └─ Interface {intf.name} -> IP: {intf.IP()}\n")
 	info("="*40 + "\n\n")
 
+	info("[*] Generating dynamic DNS configuration...\n")
+	config_dir = 'dns_config'
+	os.makedirs(config_dir, exist_ok=True)
+	config_path = os.path.join(config_dir, 'web_servers.json')
+	
+	ws_ips = []
+	# Assumes any node starting with 'ws' is a web server pool candidate
+	for host in net.hosts:
+		if host.name.startswith('ws'):
+			ws_ips.append(host.IP())
+			
+	dns_config = {
+		"myawesomewebserver.com": ws_ips
+	}
+	
+	with open(config_path, 'w') as f:
+		json.dump(dns_config, f, indent=4)
+		
+	info(f"[*] Wrote {len(ws_ips)} web server IPs to {config_path}\n\n")
+	# ==========================================
+
 	# 1. Start the background thread
-	# Setting daemon=True ensures the thread dies when the main program exits
 	info("[*] Background scenario running. Dropping into CLI...\n")
 	background_thread = threading.Thread(
 		target=run_scenario_loop, 
@@ -154,6 +171,11 @@ def main(topo_file, scenario_file):
 
 	# 3. Cleanup after exiting CLI
 	info("[*] Shutting down...\n")
+	
+	if os.path.exists(config_path):
+		os.remove(config_path)
+		info(f"[*] Cleaned up dynamic DNS config: {config_path}\n")
+		
 	net.stop()
 
 if __name__ == '__main__':
